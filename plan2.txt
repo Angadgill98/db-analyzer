@@ -1,0 +1,762 @@
+1. Database Connection
+
+This is the first feature.
+
+User sees:
+
+Connect Database
+
+Host:     localhost
+Port:     5432
+Database: music
+Username: postgres
+Password: ********
+
+[ Connect ]
+
+The important part is:
+
+The browser should not directly connect to PostgreSQL.
+
+Instead:
+
+Browser
+   │
+   │ connection information
+   ▼
+Backend
+   │
+   │ PostgreSQL connection
+   ▼
+Database
+
+The backend creates a connection pool.
+
+What you learn
+connection pooling
+authentication
+secure credential handling
+database drivers
+connection lifecycle
+timeouts
+error handling
+2. Database Overview
+
+Once connected:
+
+DATABASE
+────────────────────────────
+
+Database       music
+Size           18.4 GB
+Tables         47
+Indexes        82
+Connections    31
+Active queries 4
+
+        Database Health
+             87 / 100
+
+But don't worry about the "health score" initially.
+
+Instead show actual metrics.
+
+For example:
+
+Tables        47
+Total rows    18.2M
+Indexes       82
+Database      18.4 GB
+
+The backend gets this information from PostgreSQL system catalogs/statistics.
+
+3. Schema Explorer
+
+Show the database structure.
+
+Database
+│
+├── users
+│   ├── id
+│   ├── name
+│   ├── email
+│   └── created_at
+│
+├── songs
+│   ├── id
+│   ├── title
+│   ├── artist_id
+│   └── duration
+│
+└── artists
+    ├── id
+    └── name
+
+Click a table:
+
+songs
+
+Columns
+─────────────────────────────
+id             UUID       PK
+title          TEXT
+artist_id      UUID       FK
+duration       INTEGER
+created_at     TIMESTAMP
+
+Then:
+
+Indexes
+─────────────────────────────
+songs_pkey
+songs_artist_id_idx
+songs_created_at_idx
+4. Schema Visualization
+
+Now turn the schema into a graph.
+
+        users
+          │
+          │
+          ▼
+       orders
+       /    \
+      /      \
+     ▼        ▼
+ products   payments
+
+You can allow:
+
+zoom
+pan
+search
+click table
+highlight relationships
+hide tables
+
+This is mostly frontend work, but the server generates the schema/relationship data.
+
+5. Table Statistics
+
+Click:
+
+songs
+
+and show:
+
+TABLE STATISTICS
+
+Rows                4,821,932
+Table size          3.2 GB
+Index size          1.4 GB
+Total size          4.6 GB
+
+Sequential scans     42,821
+Index scans          8,293,122
+
+Dead tuples          182,321
+Last vacuum          2h ago
+Last analyze         35m ago
+
+Now you're starting to get into real database analysis.
+
+6. Table Size Analysis
+
+Give users a ranking:
+
+Largest Tables
+
+songs             4.6 GB
+events            3.8 GB
+users             1.2 GB
+orders            892 MB
+comments          421 MB
+
+Click songs:
+
+songs
+
+Data:       3.2 GB
+Indexes:    1.4 GB
+Total:      4.6 GB
+
+Then break down the indexes:
+
+songs_pkey             420 MB
+songs_artist_idx       380 MB
+songs_created_idx      290 MB
+songs_title_idx        310 MB
+
+This gives users a very useful understanding of where database storage goes.
+
+7. Index Analyzer
+
+Now we get more interesting.
+
+Analyze indexes and detect things like:
+
+Duplicate indexes
+Potential duplicate indexes
+
+songs_artist_idx
+songs_artist_id_idx
+
+Both appear to index:
+artist_id
+Unused indexes
+Potentially unused
+
+songs_title_idx
+Index scans: 0
+Size: 310 MB
+
+You don't automatically tell the user:
+
+DELETE THIS.
+
+Instead:
+
+This index has had 0 recorded scans during the
+available statistics period.
+
+Review before removing.
+
+Because database statistics have limitations.
+
+8. Query Explorer
+
+Now let the user inspect queries.
+
+Query Explorer
+
+Search queries...
+
+Query                              Calls      Avg
+────────────────────────────────────────────────────
+SELECT ... users                    82,123    4ms
+SELECT ... songs                    61,823    12ms
+SELECT ... orders                   12,821    183ms
+
+Click one.
+
+9. Query Analyzer
+
+This is one of the core features.
+
+User gives:
+
+SELECT *
+FROM orders
+WHERE user_id = '...';
+
+Server executes:
+
+EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)
+...
+
+Then parses PostgreSQL's output.
+
+Instead of dumping raw JSON to the browser, transform it into your own model:
+
+Query
+
+Execution time       183 ms
+Planning time          2 ms
+Rows returned          1
+Buffers hit          12,821
+Buffers read          2,431
+10. Execution Plan Visualizer
+
+This could become one of the coolest UI features.
+
+Instead of:
+
+Nested Loop
+  -> Index Scan
+  -> Seq Scan
+
+show:
+
+              Nested Loop
+                   │
+          ┌────────┴────────┐
+          ▼                 ▼
+      Index Scan         Seq Scan
+       users              orders
+
+Each node displays:
+
+Seq Scan
+
+Estimated rows: 10,000
+Actual rows:    2,400,000
+
+Time:           172 ms
+Buffers:        12,821
+
+Color isn't necessary initially; eventually you can visually emphasize expensive nodes.
+
+11. Query Performance Analysis
+
+Don't just show one execution.
+
+Track queries over time.
+
+Query Performance
+
+             Avg Time
+               │
+200ms          │       ╭──╮
+               │      ╱  ╰───╮
+100ms          │──────╯       ╰────
+               │
+               └────────────────────
+                    time
+
+Metrics:
+
+average execution time
+median
+p95
+p99
+calls
+rows
+shared blocks hit
+shared blocks read
+
+Now you have historical observability.
+
+12. Slow Query Detection
+
+Automatically identify expensive queries.
+
+Example:
+
+Slow Queries
+
+1. SELECT ... orders
+   Avg: 821ms
+   Calls: 12,821
+
+2. SELECT ... events
+   Avg: 612ms
+   Calls: 8,921
+
+3. SELECT ... users
+   Avg: 421ms
+   Calls: 2,821
+
+Click one → Query Analyzer.
+
+13. Query Recommendations
+
+This is where your analyzer becomes intelligent.
+
+Suppose the server sees:
+
+WHERE email = ?
+
+and the table has:
+
+users
+2,400,000 rows
+
+Indexes:
+users_pkey
+users_created_idx
+
+Your analyzer can say:
+
+Potential optimization
+
+The query filters by:
+
+users.email
+
+No matching index was detected.
+
+Potential index:
+
+CREATE INDEX ... ON users(email)
+
+Notice:
+
+potential.
+
+You're giving evidence, not blindly modifying their database.
+
+14. Query Comparison
+
+This is a particularly good feature.
+
+User has:
+
+SELECT *
+FROM users
+WHERE email = 'abc@example.com';
+
+Your UI:
+
+        Current Query
+              │
+              ▼
+          Analyze
+              │
+              ▼
+       Recommendation
+              │
+              ▼
+      Suggested Query
+
+Then compare:
+
+                 Before       After
+
+Execution        482ms        12ms
+Rows scanned     2.4M         1
+Buffers          18231        8
+
+This makes the analyzer much more useful than simply displaying EXPLAIN.
+
+15. Database Activity
+
+Create a live dashboard.
+
+LIVE DATABASE
+
+Connections       42
+Active queries     8
+Idle              31
+Waiting             3
+
+CPU                 41%
+Memory              62%
+
+Transactions/sec   1,821
+Queries/sec        4,821
+
+The browser receives updates through WebSockets.
+
+Postgres
+   │
+   │ polling
+   ▼
+Backend
+   │
+   │ WebSocket
+   ▼
+Browser
+16. Active Queries
+
+Show:
+
+ACTIVE QUERIES
+
+PID       Duration    State
+
+18231     4.2 sec     active
+18232     1.8 sec     active
+18233     38 sec      waiting
+
+Click one:
+
+PID: 18233
+
+Duration: 38 sec
+
+Wait event:
+Lock
+
+Query:
+UPDATE orders ...
+
+Then show which process is blocking it.
+
+17. Lock Analyzer
+
+This is another advanced feature.
+
+Imagine:
+
+Transaction A
+     │
+     │ locks row
+     ▼
+   users
+     ▲
+     │ waiting
+     │
+Transaction B
+
+Your UI could display:
+
+Blocking Chain
+
+TX 1842
+   ↓ blocks
+TX 1847
+   ↓ blocks
+TX 1851
+
+This is genuinely useful for debugging production databases.
+
+18. Connection Analyzer
+
+Show:
+
+Connections
+
+Application       Connections
+
+music-api              32
+worker                  8
+admin                   2
+
+Total                  42
+Max                    100
+
+And detect:
+
+Connection pool utilization: 42%
+
+No immediate pressure detected.
+19. Database Growth
+
+Track storage over time.
+
+Database Growth
+
+GB
+│
+│                       ╭──
+│                  ╭────╯
+│             ╭────╯
+│        ╭────╯
+│───────╯
+└──────────────────────────
+          time
+
+Then:
+
+Current:      182 GB
+Growth:       +4.2 GB/week
+Estimated:    +18 GB/month
+
+This becomes much more useful once historical data accumulates.
+
+20. Alerts
+
+Let users configure:
+
+Create Alert
+
+Metric:
+  Query execution time
+
+Condition:
+  > 500ms
+
+For:
+  5 minutes
+
+Action:
+  Email / Webhook
+
+Other examples:
+
+Database > 80% storage
+Connections > 90%
+Query p95 > 1 sec
+Long transaction > 5 min
+Lock waiting detected
+21. Reports
+
+Generate a database report:
+
+DATABASE REPORT
+────────────────────────────
+
+Database: production
+
+Size                 182 GB
+Tables               218
+Indexes              431
+
+Potential issues
+
+⚠ 3 unused indexes
+⚠ 2 large sequential scans
+⚠ 1 long-running transaction
+
+Query performance
+
+P95: 183ms
+
+Storage growth
+
++4.2 GB/week
+
+The important thing is that the server generates the analysis, and the browser receives a compact report.
+
+22. Multi-Database Support
+
+Once PostgreSQL works properly, add:
+
+Connections
+
+Production
+Staging
+Development
+Analytics
+
+Then eventually:
+
+PostgreSQL
+MySQL
+SQLite
+
+But I'd not start here.
+
+Build PostgreSQL extremely well first.
+
+23. Multi-User / Teams
+
+Then turn it into a proper web application.
+
+Organization
+│
+├── Production DB
+├── Staging DB
+└── Analytics DB
+
+Roles:
+
+Owner
+Admin
+Developer
+Viewer
+
+And permissions such as:
+
+Can view database
+Can run queries
+Can view credentials
+Can create alerts
+Can modify database
+24. The Security Model
+
+This becomes extremely important because your server is connecting to people's databases.
+
+You should eventually have:
+
+Browser
+   │
+   │ HTTPS
+   ▼
+API
+   │
+   ├── Authentication
+   ├── Authorization
+   ├── Audit logging
+   │
+   ▼
+Credential Vault
+   │
+   ▼
+Database
+
+Never send database passwords back to the frontend after connection setup.
+
+And ideally your analyzer initially operates in read-only mode.
+
+25. The really advanced version
+
+Eventually your product could have four major sections:
+
+┌─────────────────────────────────────────────┐
+│              DATABASE OBSERVATORY           │
+├─────────────┬───────────────────────────────┤
+│             │                               │
+│ Overview    │ Database Health               │
+│             │                               │
+│ Schema      │ ┌──────┐ ┌──────┐ ┌──────┐   │
+│             │ │ Size │ │Query │ │Locks │   │
+│ Queries     │ └──────┘ └──────┘ └──────┘   │
+│             │                               │
+│ Tables      │ Query Performance             │
+│             │ ──────────────────────────    │
+│ Indexes     │                               │
+│             │ Storage Growth                │
+│ Activity    │ ──────────────────────────    │
+│             │                               │
+│ Alerts      │                               │
+└─────────────┴───────────────────────────────┘
+
+And the architecture becomes:
+
+                     Angular
+                       │
+                API / WebSocket
+                       │
+              ┌────────▼────────┐
+              │    API Server   │
+              └────────┬────────┘
+                       │
+        ┌──────────────┼────────────────┐
+        │              │                │
+        ▼              ▼                ▼
+   DB Analyzer    Query Analyzer    Metrics Engine
+        │              │                │
+        └──────────────┼────────────────┘
+                       │
+                ┌──────▼──────┐
+                │ Job Workers │
+                └──────┬──────┘
+                       │
+             ┌─────────┴─────────┐
+             ▼                   ▼
+        PostgreSQL          Redis/Queue
+             │
+             ▼
+      User's Database
+I'd build it in this order
+
+Phase 1 — Foundation
+
+PostgreSQL connection
+Authentication
+Database overview
+Schema explorer
+Table/index information
+
+Phase 2 — Actual analyzer
+
+Table statistics
+Index analyzer
+Query execution
+EXPLAIN ANALYZE parser
+Execution-plan visualization
+
+Phase 3 — Observatory
+
+Active queries
+Locks
+Connections
+Slow queries
+Historical metrics
+
+Phase 4 — Intelligence
+
+Index recommendations
+Query recommendations
+Query comparison
+Anomaly detection
+Database health reports
+
+Phase 5 — Product
+
+Multiple databases
+Teams/permissions
+Alerts
+Reports
+Audit logs
