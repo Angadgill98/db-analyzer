@@ -1,0 +1,67 @@
+checek version adn tehn isntall the apckge accoring ly 
+
+sudo apt install postgresql-server-dev-18
+
+
+
+to oout he new extesion file in appropriate directoris adn lado tehetension
+
+make 
+sudo make  install 
+
+
+
+i wan tot din the ph if not sikp foreamrd 
+sudo -u postgres psql
+psql -c "SHOW config_file;"
+
+
+
+
+sudo nano /etc/postgresql/18/main/postgresql.conf
+shared_preload_libraries = 'extension'
+sudo systemctl restart postgresql
+
+
+to cehck if extesion wa dofund or not 
+sudo -u postgres psql -c "SHOW shared_preload_libraries;"
+
+
+qurich comamdn to compile adn ready to go 
+make 
+sudo make  install 
+sudo systemctl restart postgresql
+
+to watch
+
+sudo tail -f /var/log/postgresql/postgresql-18-main.log
+
+
+
+
+
+
+
+sudo -u postgres psql -c "SELECT 1;"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+sudo apt install libuv1-dev
+sudo apt install libcjson-dev
+sudo apt install libkrb5-dev
