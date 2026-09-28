@@ -49,13 +49,25 @@ export class Db_repo{
     }
 
     async GetDbCredentials(db: Pool, user_id: string, db_id: string) {
-        const result = await db.query(
-            `SELECT id, db_name, host, port, database_name, username, password
-            FROM db_credentials
-            WHERE user_id = $1 AND id = $2`,
-            [user_id, db_id]
-        );
+        try {
+            let result = await db.query(
+                `SELECT id, db_name, host, port, database_name, username, password
+                FROM db_credentials
+                WHERE user_id = $1 AND id = $2`,
+                [user_id, db_id]
+            );
 
-        return result.rows;
+            if (result.rowCount !== 1) {
+                return undefined;
+            }
+
+            return result.rows[0];
+        } catch (error) {
+            console.error("Operation: GetDbCredentials");
+            console.error("Parameters:", { user_id, db_id });
+            console.error("Error:", error);
+
+            return undefined;
+        }
     }
 }

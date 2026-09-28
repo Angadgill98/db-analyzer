@@ -84,4 +84,23 @@ export class User_repo {
             return undefined;
         }
     }
+
+    async GetUserDbs(db: Pool, user_id: string) {
+        try {
+            const result = await db.query(
+                `SELECT id, db_name
+                FROM db_credentials
+                WHERE user_id = $1`,
+                [user_id]
+            );
+
+            return result.rows;
+        } catch (error) {
+            console.error("Operation: GetUserDbs");
+            console.error("Parameters:", { user_id });
+            console.error("Error:", error);
+
+            return undefined;
+        }
+    }
 }

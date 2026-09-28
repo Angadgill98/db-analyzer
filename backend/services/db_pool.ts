@@ -37,11 +37,11 @@ export class Client_db{
 
 
     public CreateJoinQuery(room_id:string):string {
-    return `SELECT backend_command(
-        '{
-            "operation": "JOIN_ROOM",
-            "room_id": "${room_id}"
-        }'::jsonb
-    );`;
-}
+        return `SELECT backend_command(
+            '{
+                "operation": "JOIN_ROOM",
+                "room_id": "${room_id}"
+            }'::jsonb
+        );`;
+    }
 }

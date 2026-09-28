@@ -3,6 +3,8 @@ import type { Server, Socket } from "socket.io";
 import { services } from "./services/services.js";
 import { handlers } from "./handlers/handlers.js";
 import { Jwt } from "./services/jwt.js";
+import { parseCookie, parseSetCookie, type Cookies } from "cookie";
+import { queryObjects } from "node:v8";
 
 
 export class Server_init{
@@ -16,11 +18,36 @@ export class Server_init{
     }
 
     public SetUpWebSockets(){
+
+        this.ws.io.use((socket,next)=>{
+            const type = socket.handshake.auth.type;
+
+            if (type === "sender") {
+                socket.data.type = "sender";
+                return next();
+            }
+
+            let cookieHeader = socket.handshake.headers.cookie;
+
+            let cookies = parseCookie(cookieHeader ?? "");
+
+            let user_id = this.ws.AuthCookie(cookies);
+
+            if (!user_id) {
+                return next(new Error("Authentication failed"));
+            }
+
+            socket.data.user_id=user_id;
+            
+            next();
+        })
         this.ws.io.on('connect',(socket)=>{
             
-            this.ws.JoinRoom(socket);
-            this.ws.InviteCollector(socket);
+            this.ws.JoinRoomAsClient(socket);
 
+            this.ws.JoinRoomAsSender(socket);
+
+            this.ws.MessageFromSender(socket);
         })
     }
 
@@ -64,19 +91,22 @@ export class Server_init{
         let router=express.Router();
         router.use(Jwt.AuthMiddleware)
         router.post('/store-db-info',async (req,res)=>{
-            handlers.db_handler.NewUserDb(req);
+            await handlers.db_handler.NewUserDb(req);
             
         })
 
         router.post('/test-connection',async (req,res)=>{
-            handlers.db_handler.TestConnection(req);
+            await handlers.db_handler.TestConnection(req);
         })
 
         router.get('/get-user-dbs',async (req,res)=>{
+            await handlers.user_handler.GetUsersDB(req)
+        })
+
+        router.post('/get-static',(req,res)=>{
 
         })
 
-        
     }
 
 }
@@ -88,31 +118,83 @@ class WebSockets{
         this.io=io
     }
 
-    JoinRoom(socket:Socket){
-        socket.on('join-room',(body)=>{
-            let roomid=body.someuserdata+"_"+socket.id
+    JoinRoomAsClient(socket: Socket) {
+        socket.on("join-room", async (body) => {
+            let db_name = body.db_name;
+            let db_id = body.db_id;
+            let user_id = socket.data.user_id;
+
+            let pool_identifier = user_id + "_" + db_name + "_" + db_id;
+
+            let [db, Poolresult] = services.Pool.GetPool(pool_identifier);
+
+            if (!Poolresult || !db) {
+                socket.emit("join-room-error", {
+                    message: "Database is not registered"
+                });
+
+                return;
+            }
+
+
+
+            let roomid = body.someuserdata + "_" + socket.id;
+
+            socket.data.type = "client";
+
             socket.join(roomid);
-        })
-    }    
 
-    InviteCollector(socket:Socket){
-        socket.on('invite-collector',async (body)=>{
-            let room_id=body.room_id
-            let db_iddentifier:string="asdas";
-            let [db, ok] = services.Pool.GetPool(db_iddentifier);
+            let join_query=db.CreateJoinQuery(roomid);
 
-            if (!ok) {
-                // pool does not exist
-                return;
-            }
-            if (db === undefined) {
+            let QueryResult=await db.SendQuery(join_query)
+
+            if (QueryResult.rowCount !== 1) {
+                socket.emit("join-room-error", {
+                    message: "Failed to register room"
+                });
+
                 return;
             }
 
-            let query=db.CreateJoinQuery(room_id);
-            let result =await db.SendQuery(query);
-
-        })
-        
+            socket.emit("join-room-success", {
+                room_id: roomid
+            });
+        });
     }
+
+    JoinRoomAsSender(socket: Socket) {
+        socket.on("join-room", (body) => {
+            let roomid = body.someuserdata;
+
+            socket.data.type = "sender";
+            socket.data.room_id = roomid;
+
+            socket.join(roomid);
+        });
+    }
+
+    MessageFromSender(socket:Socket){
+        socket.on("metrics",(body)=>{
+
+        })
+    }
+
+    
+
+    AuthCookie(cookies: Cookies): string | null {
+        let refreshToken = cookies.refresh_token;
+
+        if (!refreshToken) {
+            return null;
+        }
+
+        let payload = Jwt.VerifyToken(refreshToken);
+
+        if (!payload) {
+            return null;
+        }
+
+        return payload.user_id;
+    }
+
 }
