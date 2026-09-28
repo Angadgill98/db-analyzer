@@ -1,0 +1,7 @@
+gcc collector.c -o collector -luv
+
+
+./collector
+
+
+chmod 777 /tmp/my_socket

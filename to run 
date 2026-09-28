@@ -37,7 +37,8 @@ to watch
 sudo tail -f /var/log/postgresql/postgresql-18-main.log
 
 
-
+run this in each db once 
+CREATE EXTENSION extension;
 
 
 
@@ -45,11 +46,12 @@ sudo tail -f /var/log/postgresql/postgresql-18-main.log
 sudo -u postgres psql -c "SELECT 1;"
 
 
+sudo -u postgres psql -d backendless -c "SELECT pg_sleep(5);"
 
 
 
 
-
+sudo -u postgres psql -d backendless -c "SELECT * FROM public."users";"
 
 
 

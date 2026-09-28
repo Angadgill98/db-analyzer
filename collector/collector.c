@@ -10,6 +10,8 @@ static const char *GO_SOCKET_PATH = "/tmp/go_agent.sock";
 
 static int go_socket_fd = -1;
 
+int ConnectToGo();
+int SendToGo(const char *message, size_t length);
 
 typedef struct {
     size_t message_length;
@@ -137,29 +139,37 @@ int ConnectToGo(){
 
 
 
-int SendToGo(const char *message, size_t length){
-    if (go_socket_fd == -1) {
+int SendToGo(const char *message, size_t length)
+{
+    if (go_socket_fd == -1)
+    {
+        printf("Collector: Go socket not connected, attempting connection...\n");
         go_socket_fd = ConnectToGo();
-
-        if (go_socket_fd == -1) {
+        if (go_socket_fd == -1)
+        {
+            fprintf(stderr, "Collector: ERROR: failed to connect to Go socket\n");
             return -1;
         }
+        printf("Collector: Connected to Go socket successfully\n");
     }
 
-    if (write(go_socket_fd, &length, sizeof(length)) == -1) {
-        perror("Collector: ERROR: write length");
+    if (write(go_socket_fd, &length, sizeof(length)) == -1)
+    {
+        perror("Collector: ERROR: failed to write message length");
         close(go_socket_fd);
         go_socket_fd = -1;
         return -1;
     }
 
-    if (write(go_socket_fd, message, length) == -1) {
-        perror("Collector: ERROR: write message");
+    if (write(go_socket_fd, message, length) == -1)
+    {
+        perror("Collector: ERROR: failed to write message");
         close(go_socket_fd);
         go_socket_fd = -1;
         return -1;
     }
 
+    printf("Collector: Message sent to Go successfully (%zu bytes)\n", length);
     return 0;
 }
 

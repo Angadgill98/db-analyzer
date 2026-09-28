@@ -39,6 +39,27 @@ app.post("/register-connection",(req,res)=>{
 
 })
 
+import crypto from "crypto";
+function CreateRoomId():string{
+    let room_id=crypto.randomUUID();
+    return room_id
+}
+
+function CreateJoinQuery():string {
+    let room_id = CreateRoomId();
+
+    return `SELECT backend_command(
+        '{
+            "operation": "JOIN_ROOM",
+            "room_id": "${room_id}"
+        }'::jsonb
+    );`;
+}
+
+async function SendJoinQuery(pool:Pool,query:string){
+    await pool.query(query);
+}
+
 
 
 interface Register_Connection_dto{
@@ -296,6 +317,8 @@ function GetTableStatsQuery() {
             ON io.relid = s.relid;
     `;
 }
+
+
 
 httpServer.listen(3000, () => {
   console.log("Server running on port 3000");
