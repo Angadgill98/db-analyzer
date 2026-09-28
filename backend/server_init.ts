@@ -55,13 +55,13 @@ export class Server_init{
         let router=express.Router();
         this.app.use('/auth',router);
 
-        router.post('signup',async(req,res)=>{
+        router.post('/signup',async(req,res)=>{
             await handlers.auth_handler.SignUp(req)
 
             
         })
 
-        router.post('signin',async(req,res)=>{
+        router.post('/signin',async(req,res)=>{
             let user_id = await handlers.auth_handler.SignIn(req)
 
             if (!user_id) {
@@ -89,6 +89,7 @@ export class Server_init{
     
     public SetUpApiRoutes(){
         let router=express.Router();
+        this.app.use('/api',router)
         router.use(Jwt.AuthMiddleware)
         router.post('/store-db-info',async (req,res)=>{
             await handlers.db_handler.NewUserDb(req);
@@ -98,12 +99,13 @@ export class Server_init{
         router.post('/test-connection',async (req,res)=>{
             await handlers.db_handler.TestConnection(req);
         })
-
+ 
         router.get('/get-user-dbs',async (req,res)=>{
             await handlers.user_handler.GetUsersDB(req)
         })
 
-        router.post('/get-static',(req,res)=>{
+        router.post('/get-static',async (req,res)=>{
+            await handlers.db_handler.GetStaticData(req);
 
         })
 

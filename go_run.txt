@@ -1,0 +1,5 @@
+go run .
+
+
+
+chmod 777 /tmp/go_agent.sock

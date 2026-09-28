@@ -1,3 +1,4 @@
+
 #include <uv.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -20,7 +21,7 @@ typedef struct {
 } MessageReader;
 
 void ParsePayload(const char *message, size_t length){
-    printf("Complete message: %.*s\n", (int)length, message);
+    printf("Collector: Complete message: %.*s\n", (int)length, message);
 }
 
 void ReadMessage(MessageReader *reader, const char *buf, size_t nread)

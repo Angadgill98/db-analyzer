@@ -137,13 +137,14 @@ static void HandleJsonMessage(const char *json)
         return;
     }
 
-    elog(LOG, "Extension: JSON metrics sent successfully");
+    // elog(LOG, "Extension: JSON metrics sent successfully");
+
+    elog(LOG, "Extension: JSON sent successfully: %s", json);
 }
 
 
 #include "utils/jsonb.h"
 PG_FUNCTION_INFO_V1(backend_command);
-
 Datum backend_command(PG_FUNCTION_ARGS)
 {
     Jsonb *jsonb_data;
@@ -159,7 +160,6 @@ Datum backend_command(PG_FUNCTION_ARGS)
 
     PG_RETURN_VOID();
 }
-
 
 
 #include "libpq/libpq-be.h"
@@ -181,6 +181,9 @@ typedef struct
 
     // PostgreSQL QueryDesc information
     bool already_executed;
+
+    // Hook information
+    const char *operation_name;
 
 } QueryStartInfo;
 
@@ -305,6 +308,10 @@ static char *QueryStartInfoToJson(QueryStartInfo *info)
 
     appendStringInfoChar(&json, '{');
 
+    appendStringInfo(&json, "\"operation_name\":");
+    escape_json(&json, info->operation_name ? info->operation_name : "");
+    appendStringInfoChar(&json, ',');
+
     appendStringInfo(&json, "\"pid\":%d,", info->pid);
 
     appendStringInfo(&json, "\"database_name\":");
@@ -335,7 +342,7 @@ static char *QueryStartInfoToJson(QueryStartInfo *info)
 
     appendStringInfo(&json, "\"operation\":%d,", info->operation);
 
-    appendStringInfo(&json, "\"already_executed\":%s",
+    appendStringInfo(&json, "\"already_executed\":%s,",
                      info->already_executed ? "true" : "false");
 
     AppendParamsJson(&json, info->params);
@@ -352,6 +359,8 @@ static void Extension_executor(QueryDesc *queryDesc, int eflags)
 {
     QueryStartInfo info = {0};
     char *message;
+
+    info.operation_name = "ExecutorStart";
 
     queryDesc->instrument_options |= INSTRUMENT_TIMER;
     queryDesc->instrument_options |= INSTRUMENT_BUFFERS;
@@ -370,13 +379,13 @@ static void Extension_executor(QueryDesc *queryDesc, int eflags)
     
     SetQueryInfo(&info, queryDesc);
 
-    LogQueryStartInfo(&info);
+    // LogQueryStartInfo(&info);
 
     message = QueryStartInfoToJson(&info);
 
-    elog(LOG, "JSON = %s", message);
+    // elog(LOG, "JSON = %s", message);
 
-
+    HandleJsonMessage(message);
 
     pfree(message);
 
@@ -436,6 +445,9 @@ typedef struct
     int64 wal_fpi;
     uint64 wal_bytes;
     int64 wal_buffers_full;
+
+    // Hook information
+    const char *operation_name;
 
 } QueryEndInfo;
 
@@ -595,6 +607,10 @@ static char *QueryEndInfoToJson(QueryEndInfo *info)
 
     appendStringInfoChar(&json, '{');
 
+    appendStringInfo(&json, "\"operation_name\":");
+    escape_json(&json, info->operation_name ? info->operation_name : "");
+    appendStringInfoChar(&json, ',');
+
     appendStringInfo(&json, "\"pid\":%d,", info->pid);
 
     appendStringInfo(&json, "\"database_name\":");
@@ -653,7 +669,7 @@ static char *QueryEndInfoToJson(QueryEndInfo *info)
     appendStringInfo(&json, "\"wal_records\":" INT64_FORMAT ",", info->wal_records);
     appendStringInfo(&json, "\"wal_fpi\":" INT64_FORMAT ",", info->wal_fpi);
     appendStringInfo(&json, "\"wal_bytes\":" UINT64_FORMAT ",", info->wal_bytes);
-    appendStringInfo(&json, "\"wal_buffers_full\":" INT64_FORMAT, info->wal_buffers_full);
+    appendStringInfo(&json, "\"wal_buffers_full\":" INT64_FORMAT ",", info->wal_buffers_full);
 
     AppendParamsJson(&json, info->params);
 
@@ -672,15 +688,17 @@ static void Extension_executor_end(QueryDesc *queryDesc)
 
     char *message;
 
+    info.operation_name = "ExecutorEnd";
+
     SetConnectionInfo_End(&info);
     SetQueryInfo_EndHook(&info, queryDesc);
     SetEndExecutionInfo(&info, queryDesc);
 
-    LogQueryEndInfo(&info);
+    // LogQueryEndInfo(&info);
 
     message = QueryEndInfoToJson(&info);
 
-    elog(LOG, "JSON = %s", message);
+    // elog(LOG, "JSON = %s", message);
 
     HandleJsonMessage(message);
 

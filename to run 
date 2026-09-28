@@ -67,3 +67,15 @@ sudo -u postgres psql -d backendless -c "SELECT * FROM public."users";"
 sudo apt install libuv1-dev
 sudo apt install libcjson-dev
 sudo apt install libkrb5-dev
+
+
+
+
+
+
+
+
+the sh file 
+
+chmod +x start.sh
+./start.sh

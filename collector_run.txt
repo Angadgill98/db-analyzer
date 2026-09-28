@@ -5,3 +5,4 @@ gcc collector.c -o collector -luv
 
 
 chmod 777 /tmp/my_socket
+sudo systemctl restart postgresql
