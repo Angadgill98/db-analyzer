@@ -1,0 +1,43 @@
+DB ANALYZER
+│
+├── 1. Query Performance & History       ← EXTENSION
+│      ├── execution performance
+│      ├── buffer/cache behavior
+│      ├── I/O performance
+│      ├── WAL activity
+│      └── query history
+│
+├── 2. Database Performance              ← POLLING
+│      ├── transaction throughput
+│      ├── row throughput
+│      ├── cache hit ratio
+│      └── temporary data activity
+│
+├── 3. Connections & Sessions             ← POLLING
+│      ├── connection counts
+│      ├── active sessions
+│      ├── running queries
+│      └── wait events
+│
+├── 4. Locks & Contention                 ← POLLING
+│      ├── locks
+│      ├── waiting locks
+│      └── contention
+│
+├── 5. Table Performance & Storage        ← POLLING
+│      ├── scans
+│      ├── row modifications
+│      ├── table I/O
+│      ├── vacuum/analyze
+│      └── table/index sizes
+│
+├── 6. Database Storage                   ← POLLING
+│      ├── database size
+│      └── growth
+│
+└── 7. Metadata & Security                ← POLLING / ON-DEMAND
+       ├── roles
+       ├── permissions
+       ├── schemas
+       ├── tables
+       └── columns

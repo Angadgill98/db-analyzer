@@ -2,11 +2,19 @@ package main
 
 import (
 	"fmt"
+
+	"github.com/joho/godotenv"
 )
 
 var socketPath = "/tmp/go_agent.sock"
 
 func main() {
+
+    err := godotenv.Load()
+    if err != nil {
+        fmt.Println("Failed to load .env:", err)
+        return
+    }
 	err, unix := CreateUnix()
 
 	if err != nil {
@@ -14,7 +22,7 @@ func main() {
 		return
 	}
 
-    sender:=CreateSender(unix)
+    sender:=CreateSender(&unix)
 
     unix.sender=&sender;
 

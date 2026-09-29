@@ -19,29 +19,30 @@ export class Server_init{
 
     public SetUpWebSockets(){
 
-        this.ws.io.use((socket,next)=>{
-            const type = socket.handshake.auth.type;
+        // this.ws.io.use((socket,next)=>{
+        //     const type = socket.handshake.auth.type;
 
-            if (type === "sender") {
-                socket.data.type = "sender";
-                return next();
-            }
+        //     if (type === "sender") {
+        //         socket.data.type = "sender";
+        //         return next();
+        //     }
 
-            let cookieHeader = socket.handshake.headers.cookie;
+        //     let cookieHeader = socket.handshake.headers.cookie;
 
-            let cookies = parseCookie(cookieHeader ?? "");
+        //     let cookies = parseCookie(cookieHeader ?? "");
 
-            let user_id = this.ws.AuthCookie(cookies);
+        //     let user_id = this.ws.AuthCookie(cookies);
 
-            if (!user_id) {
-                return next(new Error("Authentication failed"));
-            }
+        //     if (!user_id) {
+        //         return next(new Error("Authentication failed"));
+        //     }
 
-            socket.data.user_id=user_id;
+        //     socket.data.user_id=user_id;
             
-            next();
-        })
+        //     next();
+        // })
         this.ws.io.on('connect',(socket)=>{
+            console.log("asdas")
             
             this.ws.JoinRoomAsClient(socket);
 
@@ -177,7 +178,7 @@ class WebSockets{
 
     MessageFromSender(socket:Socket){
         socket.on("metrics",(body)=>{
-
+            console.log("asdas")
         })
     }
 

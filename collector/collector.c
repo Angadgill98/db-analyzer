@@ -49,8 +49,8 @@ void ReadMessage(MessageReader *reader, const char *buf, size_t nread)
     reader->received += copy;
 
     if (reader->received == reader->message_length) {
-
-        ParsePayload(reader->message, reader->message_length);
+        //used for printing do for now
+        // ParsePayload(reader->message, reader->message_length);
 
         SendToGo(reader->message, reader->message_length);
 

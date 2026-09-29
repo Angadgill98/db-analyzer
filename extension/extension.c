@@ -694,7 +694,7 @@ static void Extension_executor_end(QueryDesc *queryDesc)
     SetQueryInfo_EndHook(&info, queryDesc);
     SetEndExecutionInfo(&info, queryDesc);
 
-    // LogQueryEndInfo(&info);
+    LogQueryEndInfo(&info);
 
     message = QueryEndInfoToJson(&info);
 
