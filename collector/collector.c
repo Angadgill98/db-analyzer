@@ -14,50 +14,125 @@ static int go_socket_fd = -1;
 int ConnectToGo();
 int SendToGo(const char *message, size_t length);
 
-typedef struct {
-    size_t message_length;
-    size_t received;
-    char *message;
-} MessageReader;
+// typedef struct {
+//     size_t message_length;
+//     size_t received;
+//     char *message;
+// } MessageReader;
+
+
 
 void ParsePayload(const char *message, size_t length){
     printf("Collector: Complete message: %.*s\n", (int)length, message);
 }
 
+// void ReadMessage(MessageReader *reader, const char *buf, size_t nread)
+// {
+//     size_t offset = 0;
+
+//     if (reader->message_length == 0) {
+//         if (nread < 8) {
+//             return;
+//         }
+
+//         memcpy(&reader->message_length, buf, 8);
+
+//         reader->message = malloc(reader->message_length);
+
+//         offset = 8;
+//     }
+
+//     size_t remaining = reader->message_length - reader->received;
+//     size_t available = nread - offset;
+//     size_t copy = available < remaining ? available : remaining;
+
+//     memcpy(reader->message + reader->received, buf + offset, copy);
+
+//     reader->received += copy;
+
+//     if (reader->received == reader->message_length) {
+//         //used for printing do for now
+//         // ParsePayload(reader->message, reader->message_length);
+
+//         SendToGo(reader->message, reader->message_length);
+
+//         free(reader->message);
+
+//         reader->message = NULL;
+//         reader->message_length = 0;
+//         reader->received = 0;
+//     }
+// }
+
+typedef struct {
+    uint64_t message_length;
+    size_t header_received;
+    size_t received;
+    char header[8];
+    char *message;
+} MessageReader;
+
 void ReadMessage(MessageReader *reader, const char *buf, size_t nread)
 {
     size_t offset = 0;
 
-    if (reader->message_length == 0) {
-        if (nread < 8) {
-            return;
+    while (offset < nread)
+    {
+        /* First, collect the 8-byte message length */
+        if (reader->header_received < 8)
+        {
+            size_t needed = 8 - reader->header_received;
+            size_t available = nread - offset;
+            size_t copy = available < needed ? available : needed;
+
+            memcpy(reader->header + reader->header_received, buf + offset, copy);
+
+            reader->header_received += copy;
+            offset += copy;
+
+            if (reader->header_received < 8)
+                continue;
+
+            memcpy(&reader->message_length, reader->header, 8);
+
+            reader->message = malloc(reader->message_length);
+
+            if (reader->message == NULL)
+            {
+                fprintf(stderr, "Collector: ERROR: failed to allocate message\n");
+                reader->message_length = 0;
+                reader->header_received = 0;
+                return;
+            }
+
+            reader->received = 0;
         }
 
-        memcpy(&reader->message_length, buf, 8);
+        /* Now collect the JSON message */
+        if (reader->received < reader->message_length)
+        {
+            size_t remaining = reader->message_length - reader->received;
+            size_t available = nread - offset;
+            size_t copy = available < remaining ? available : remaining;
 
-        reader->message = malloc(reader->message_length);
+            memcpy(reader->message + reader->received, buf + offset, copy);
 
-        offset = 8;
-    }
+            reader->received += copy;
+            offset += copy;
 
-    size_t remaining = reader->message_length - reader->received;
-    size_t available = nread - offset;
-    size_t copy = available < remaining ? available : remaining;
+            if (reader->received < reader->message_length)
+                continue;
+        }
 
-    memcpy(reader->message + reader->received, buf + offset, copy);
-
-    reader->received += copy;
-
-    if (reader->received == reader->message_length) {
-        //used for printing do for now
-        // ParsePayload(reader->message, reader->message_length);
-
+        /* Complete message received */
         SendToGo(reader->message, reader->message_length);
+        // ParsePayload(reader->message, reader->message_length);
 
         free(reader->message);
 
         reader->message = NULL;
         reader->message_length = 0;
+        reader->header_received = 0;
         reader->received = 0;
     }
 }

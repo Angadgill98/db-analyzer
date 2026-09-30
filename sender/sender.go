@@ -92,7 +92,7 @@ func (s *Sender) HandleRoutine(channel <-chan []byte) {
 			fmt.Println("Sender: failed to parse operation:", err)
 			return
 		}
-
+		// fmt.Println("Sender: operation:", operation)
 	}
 }
 
@@ -142,7 +142,22 @@ func (s *Sender) ParseOperation(payload []byte) (any, error) {
 
 
 		return operation, nil
+	
+	
 
+	case "POLLING":
+		var operation PollingOperation
+
+		err := json.Unmarshal(payload, &operation)
+		if err != nil {
+			return nil, err
+		}
+
+		s.HandlePolling(operation)
+		// fmt.Printf("Sender: opearion is POLLING = %+v\n", operation)
+
+
+		return operation, nil
 	default:
 		return nil, fmt.Errorf("unknown operation: %s", header.OperationName)
 	}
@@ -186,4 +201,8 @@ func (s *Sender) HandleBackendCommand(operation BackendCommandOperation) {
 	s.rooms_id[roomID] = struct{}{}
 
 
+}
+
+func (s *Sender) HandlePolling(operation PollingOperation) {
+    fmt.Printf("Sender: PollingOperation ")
 }

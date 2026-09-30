@@ -69,7 +69,7 @@ func (unix *Unix_Socket) handleConnection(conn net.Conn) {
 			fmt.Println("Sender: failed to read payload:", err)
 			return
 		}
-
+		fmt.Printf("Sender: received %d bytes\n", len(payload))
 		// fmt.Println("Sender: received:", string(payload))
 
 
